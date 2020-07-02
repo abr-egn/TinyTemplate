@@ -27,7 +27,8 @@
 //!
 //! The value may be a dotted path through a hierarchy of context objects. This will look up the
 //! "friend" field in the context structure, then substitute the "name" field from the "friend"
-//! object.
+//! object.  Each element in the path can be either a field name or a numeric index into a tuple
+//! or array field.
 //!
 //! ```text
 //! And hello to {friend.name} as well!

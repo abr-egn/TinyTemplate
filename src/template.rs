@@ -65,7 +65,18 @@ impl<'render, 'template> RenderContext<'render, 'template> {
         for step in path.iter() {
             match current.get(step) {
                 Some(next) => current = next,
-                None => return Err(lookup_error(self.original_text, step, path, current)),
+                None => {
+                    // Lookup by name failed; try lookup by index.
+                    if let Some(next) = step
+                        .parse::<usize>()
+                        .ok()
+                        .and_then(|index| current.get(index))
+                    {
+                        current = next
+                    } else {
+                        return Err(lookup_error(self.original_text, step, path, current));
+                    }
+                }
             }
         }
         Ok(current)
@@ -357,6 +368,7 @@ mod test {
         boolean: bool,
         null: Option<usize>,
         array: Vec<usize>,
+        tuple: (&'static str, NestedContext),
         nested: NestedContext,
         escapes: &'static str,
     }
@@ -368,6 +380,7 @@ mod test {
             boolean: true,
             null: None,
             array: vec![1, 2, 3],
+            tuple: ("Greetings", NestedContext { value: 7 }),
             nested: NestedContext { value: 10 },
             escapes: "1:< 2:> 3:& 4:' 5:\"",
         };
@@ -446,6 +459,23 @@ mod test {
             )
             .unwrap();
         assert_eq!("The number of the day is 10.", &string);
+    }
+
+    #[test]
+    fn test_path_numeric() {
+        let template = compile("{tuple.0} lucky visitor number {tuple.1.value}.");
+        let context = context();
+        let template_registry = other_templates();
+        let formatter_registry = formatters();
+        let string = template
+            .render(
+                &context,
+                &template_registry,
+                &formatter_registry,
+                &default_formatter(),
+            )
+            .unwrap();
+        assert_eq!("Greetings lucky visitor number 7.", &string);
     }
 
     #[test]
